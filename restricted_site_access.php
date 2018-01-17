@@ -218,6 +218,18 @@ class Restricted_Site_Access {
 			$blog_public = get_site_option( 'blog_public', 2 );
 		}
 
+		// Преобразование доменов в IP при необходимости
+		for ( $address_number = 0; $address_number < count($rsa_options['allowed']); $address_number++ ) {
+			// Если адрес - это домен
+			if ( self::is_domain( $rsa_options['allowed'][$address_number] ) ) {
+				// Преобразуем его в IP
+				$ip = gethostbyname( $rsa_options['allowed'][$address_number] );
+					//if ( self::is_ip( $ip ) ) {
+						$rsa_options['allowed'][$address_number] = $ip;
+					//}
+			}
+		}
+
 		$is_restricted = !( is_admin() || is_user_logged_in() || 2 != $blog_public || ( defined( 'WP_INSTALLING' ) && isset( $_GET['key'] ) ) );
 		if ( apply_filters( 'restricted_site_access_is_restricted', $is_restricted, $wp ) === false ) {
 			return;
@@ -681,12 +693,12 @@ class Restricted_Site_Access {
 		$new_input['allowed'] = array();
 		if ( ! empty( $input['allowed'] ) && is_array( $input['allowed'] ) ) {
 			foreach ( $input['allowed'] as $address ) {
-				if ( self::is_domain( $address ) ) {
-					$ip = gethostbyname( $address );
-					if ( self::is_ip( $ip ) ) {
-						$new_input['allowed'][] = $ip;
+				//if ( self::is_domain( $address ) ) {
+					//$ip = gethostbyname( $address );
+					if ( self::is_ip( $address ) || self::is_domain( $address ) ) {
+						$new_input['allowed'][] = $address;
 					}
-				} 
+				//} 
 			}
 		}
 
@@ -855,6 +867,11 @@ class Restricted_Site_Access {
 	 * @return bool True if its a valid IP address.
 	 */
 	public static function is_ip( $ip_address ) {
+		// Если это домен, то сразу выходим из функции
+		if ( self::is_domain( $ip_address ) ) {
+			return false;
+		}
+
 		// very basic validation of ranges
 		if ( strpos( $ip_address, '/' ) ) {
 			$ip_parts = explode( '/', $ip_address );
